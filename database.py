@@ -32,14 +32,14 @@ def log_in(email, password):
 
 # --- DATA FUNCTIONS ---
 
-def save_user_qr(access_token, user_id, url_string):
+def save_user_qr(access_token, user_id, url_string, title=None):
     """Saves a URL for a specific user using their UUID"""
     # This print will show up in your terminal
     print(f"DEBUG: Saving for User UUID: {user_id}")
     
     # Get user-specific client with their auth token
     user_client = get_user_client(access_token)
-    data = {"userid": user_id, "url": url_string}
+    data = {"userid": user_id, "url": url_string, "title": title}
     # This now passes the auth.uid() check!
     return user_client.table("saved_qrs").insert(data).execute()
 
@@ -50,3 +50,11 @@ def get_user_history(access_token, user_id):
     # Note: Using 'userid' to match your Supabase screenshot
     response = user_client.table("saved_qrs").select("*").eq("userid", user_id).execute()
     return response.data
+
+def update_qr_title(access_token, qr_id, new_title):
+    """Updates the title of a saved QR code"""
+    print(f"DEBUG update_qr_title: access_token exists: {bool(access_token)}, qr_id: {qr_id}, new_title: {new_title}")
+    user_client = get_user_client(access_token)
+    result = user_client.table("saved_qrs").update({"title": new_title}).eq("id", qr_id).execute()
+    print(f"DEBUG update_qr_title result: {result}")
+    return result

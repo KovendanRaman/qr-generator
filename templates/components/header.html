@@ -1,0 +1,42 @@
+<header class="main-header">
+    <div class="header-container">
+        <div class="header-brand">
+            <a href="/" class="brand-link">
+                <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
+                    <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
+                    <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
+                    <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
+                </svg>
+                <span class="brand-text">QR Generator</span>
+            </a>
+        </div>
+        
+        <nav class="header-nav">
+            <a href="/" class="nav-link {% if request.endpoint and request.endpoint == 'index' %}active{% endif %}">
+                <span>Home</span>
+            </a>
+            {% if user %}
+                <a href="/history" class="nav-link {% if request.endpoint and request.endpoint == 'history' %}active{% endif %}">
+                    <span>Dashboard</span>
+                </a>
+                <div class="user-menu">
+                    <div class="user-info">
+                        <span class="user-email">{{ user.email }}</span>
+                    </div>
+                    <a href="/logout" class="nav-link logout-link">
+                        <span>Logout</span>
+                    </a>
+                </div>
+            {% else %}
+                <a href="/login" class="nav-link {% if request.endpoint and request.endpoint == 'login_route' %}active{% endif %}">
+                    <span>Login</span>
+                </a>
+                <a href="/signup" class="nav-link nav-button {% if request.endpoint and request.endpoint == 'signup_route' %}active{% endif %}">
+                    <span>Sign Up</span>
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+

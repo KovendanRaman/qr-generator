@@ -7,30 +7,151 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav>
-        <a href="/">Home</a>
-        <a href="/logout">Logout</a>
-    </nav>
+    {% include 'components/header.html' %}
 
     <main>
-        <h1>Welcome to your Dashboard</h1>
-        <p>Logged in as: <strong>{{ user.email }}</strong></p>
+        <div class="content-card">
+            <h1>Welcome to your Dashboard</h1>
+            <p>Logged in as: <strong>{{ user.email }}</strong></p>
 
-        <hr>
+            <hr>
 
-        <h2>Your Saved History</h2>
-        {% if history %}
-            <div class="history-grid">
-                {% for item in history %}
-                    <div class="history-item">
-                        <p><strong>URL:</strong> <a href="{{ item.url }}" target="_blank">{{ item.url }}</a></p>
-                        <p><small>Saved on: {{ item.created_at }}</small></p>
-                        </div>
-                {% endfor %}
+            <div class="history-header">
+                <h2>Your Saved History</h2>
+                <div class="sort-container">
+                    <label for="sort-select" class="sort-label">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Sort by:
+                    </label>
+                    <select id="sort-select" class="sort-select" onchange="window.location.href='/history?sort=' + this.value">
+                        <option value="date_desc" {% if current_sort == 'date_desc' %}selected{% endif %}>Newest First</option>
+                        <option value="date_asc" {% if current_sort == 'date_asc' %}selected{% endif %}>Oldest First</option>
+                        <option value="title_asc" {% if current_sort == 'title_asc' %}selected{% endif %}>A → Z</option>
+                        <option value="title_desc" {% if current_sort == 'title_desc' %}selected{% endif %}>Z → A</option>
+                    </select>
+                </div>
             </div>
-        {% else %}
-            <p>You haven't generated any QR codes yet. <a href="/">Try one now!</a></p>
-        {% endif %}
+
+            {% if history %}
+                <div class="history-grid">
+                    {% for item in history %}
+                        <div class="history-item">
+                            <div class="title-container">
+                                <h3 id="title-{{ item.id }}" class="qr-title" data-qr-id="{{ item.id }}" data-title="{{ item.title or item.url }}">
+                                    {{ item.title or item.url }}
+                                </h3>
+                                <button onclick="editTitleClick({{ item.id }})" class="edit-title-btn" title="Edit title">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="history-url">
+                                <a href="{{ item.url }}" target="_blank" class="history-link" title="{{ item.url }}">{{ item.url }}</a>
+                            </div>
+
+                            <div id="qr-container-{{ loop.index }}" class="qr-code-container" data-url="{{ item.url }}">
+                                <button onclick="loadQRClick({{ loop.index }})" class="view-qr-btn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                                        <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
+                                        <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
+                                        <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
+                                        <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
+                                    </svg>
+                                    View QR Code
+                                </button>
+                            </div>
+
+                            <small class="history-date">Saved: {{ item.created_at[:10] if item.created_at else 'Unknown' }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>You haven't generated any QR codes yet. <a href="/">Try one now!</a></p>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+    function loadQRClick(index) {
+        const containerId = 'qr-container-' + index;
+        const container = document.getElementById(containerId);
+        const url = container.getAttribute('data-url');
+        
+        // Create the image URL pointing to our new Flask route
+        // encodeURIComponent ensures special characters in the URL don't break the link
+        const imageUrl = '/qrcode_image?url=' + encodeURIComponent(url);
+        
+        // Replace the button with the image and a download link
+        container.innerHTML = `
+            <div class="qr-loaded">
+                <img src="${imageUrl}" alt="QR Code" class="qr-code-image">
+                <a href="${imageUrl}" download="qr-code.png" class="download-link">
+                    <button class="download-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Download
+                    </button>
+                </a>
+            </div>
+        `;
+    }
+
+    function editTitleClick(id) {
+        const titleElement = document.getElementById('title-' + id);
+        const currentTitle = titleElement.getAttribute('data-title');
+        const newTitle = prompt('Edit title:', currentTitle);
+        
+        if (newTitle && newTitle !== currentTitle) {
+            // Send update request to server
+            fetch('/update_title', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: id,
+                    title: newTitle
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    titleElement.textContent = data.title;
+                    titleElement.setAttribute('data-title', data.title);
+                } else {
+                    alert('Failed to update title: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update title');
+            });
+        }
+    }
+    </script>
+
+    <style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .qr-loaded {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: fadeIn 0.4s ease-out;
+    }
+    </style>
+</body>
+</html>
+        </div>
     </main>
 </body>
 </html>

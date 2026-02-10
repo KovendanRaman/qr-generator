@@ -2,36 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav>
-        <a href="/">Home</a>
-        {% if user %}
-            <a href="/history">Dashboard</a>
-            <a href="/logout">Logout</a>
-        {% else %}
-            <a href="/login">Login</a>
-            <a href="/signup">Sign Up</a>
-        {% endif %}
-    </nav>
+    {% include 'components/header.html' %}
 
     <main>
-        <h1>Generate a QR Code</h1>
-        <form action="/generate" method="POST">
-            <input type="url" name="url" placeholder="Paste your link here..." required>
-            <button type="submit">Generate</button>
-        </form>
+        <div class="content-card">
+            <h1>Generate a QR Code</h1>
+            <form action="/generate" method="POST">
+                <input type="url" name="url" placeholder="Paste your link here..." required>
+                <button type="submit">Generate</button>
+            </form>
 
-        {% if qr_code %}
-            <div class="result">
-                <h3>Your QR Code for: {{ original_url }}</h3>
-                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
-                <br>
-                <a href="data:image/png;base64,{{ qr_code }}" download="qrcode.png">Download Image</a>
-            </div>
-        {% endif %}
+            {% if qr_code %}
+                <div class="result">
+                    <h3>Your QR Code for: {{ original_url }}</h3>
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                    <br>
+                    <a href="data:image/png;base64,{{ qr_code }}" download="qrcode.png">Download Image</a>
+                </div>
+            {% endif %}
+        </div>
     </main>
 </body>
 </html>
