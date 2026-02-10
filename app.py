@@ -51,10 +51,12 @@ def generate():
 
     # If the user is logged in, save the URL to their history in Supabase
     if 'user' in session:
-        user_id = session['user']['id']
+        # Check if your session stores it as 'id' or 'user_id'
+        user_id = session['user'].get('id')
         save_user_qr(user_id, url)
 
-    return render_template('index.html', qr_code=qr_base64, original_url=url)
+    user = session.get('user')
+    return render_template('index.html', qr_code=qr_base64, original_url=url, user=user)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_route():
@@ -76,11 +78,14 @@ def login_route():
         password = request.form.get('password')
         try:
             res = log_in(email, password)
-            # Store user data in the Flask session
-            session['user'] = res.user.__dict__ 
+            # IMPORTANT: session['user'] must be set correctly
+            # Supabase returns the user object in res.user
+            session['user'] = {'id': res.user.id, 'email': res.user.email}
+            
             flash("Welcome back!")
-            return redirect(url_for('index'))
+            return redirect(url_for('index'))  # This sends you home after login
         except Exception as e:
+            print(f"Login Error: {e}")  # This prints the error to your terminal
             flash("Invalid login credentials.")
     return render_template('login.html')
 

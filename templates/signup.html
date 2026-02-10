@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up - QR Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/login">Login</a>
+    </nav>
+
+    <main>
+        <h2>Create an Account</h2>
+        <p>Sign up to save your QR code history for free.</p>
+        
+        <form method="POST">
+            <div style="margin-bottom: 15px;">
+                <input type="email" name="email" placeholder="Email Address" required>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <input type="password" name="password" placeholder="Choose a Password" required>
+            </div>
+            <button type="submit">Create Account</button>
+        </form>
+
+        <p>Already have an account? <a href="/login">Login here</a></p>
+    </main>
+</body>
+</html>

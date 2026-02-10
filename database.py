@@ -22,6 +22,9 @@ def log_in(email, password):
 
 def save_user_qr(user_id, url_string):
     """Saves a URL for a specific user using their UUID"""
+    # This print will show up in your terminal
+    print(f"DEBUG: Saving for User UUID: {user_id}")
+    
     # Note: Using 'userid' to match your Supabase screenshot
     data = {"userid": user_id, "url": url_string}
     response = supabase.table("saved_qrs").insert(data).execute()
