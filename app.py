@@ -51,9 +51,9 @@ def generate():
 
     # If the user is logged in, save the URL to their history in Supabase
     if 'user' in session:
-        # Check if your session stores it as 'id' or 'user_id'
+        token = session.get('access_token')
         user_id = session['user'].get('id')
-        save_user_qr(user_id, url)
+        save_user_qr(token, user_id, url)  # Pass the token here
 
     user = session.get('user')
     return render_template('index.html', qr_code=qr_base64, original_url=url, user=user)
@@ -80,6 +80,7 @@ def login_route():
             res = log_in(email, password)
             # IMPORTANT: session['user'] must be set correctly
             # Supabase returns the user object in res.user
+            session['access_token'] = res.session.access_token  # Save the token
             session['user'] = {'id': res.user.id, 'email': res.user.email}
             
             flash("Welcome back!")
@@ -94,9 +95,10 @@ def history():
     if 'user' not in session:
         return redirect(url_for('login_route'))
     
+    token = session.get('access_token')
     user_id = session['user']['id']
     # Fetch list of URLs from Supabase
-    saved_data = get_user_history(user_id)
+    saved_data = get_user_history(token, user_id)
     
     # Pass BOTH the history data and the user session data
     return render_template('dashboard.html', history=saved_data, user=session.get('user'))
