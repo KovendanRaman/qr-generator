@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - QR Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main>
+        <h1>Welcome to your Dashboard</h1>
+        <p>Logged in as: <strong>{{ user.email }}</strong></p>
+
+        <hr>
+
+        <h2>Your Saved History</h2>
+        {% if history %}
+            <div class="history-grid">
+                {% for item in history %}
+                    <div class="history-item">
+                        <p><strong>URL:</strong> <a href="{{ item.url }}" target="_blank">{{ item.url }}</a></p>
+                        <p><small>Saved on: {{ item.created_at }}</small></p>
+                        </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>You haven't generated any QR codes yet. <a href="/">Try one now!</a></p>
+        {% endif %}
+    </main>
+</body>
+</html>

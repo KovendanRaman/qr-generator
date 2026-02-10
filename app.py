@@ -93,7 +93,8 @@ def history():
     # Fetch list of URLs from Supabase
     saved_data = get_user_history(user_id)
     
-    return render_template('history.html', history=saved_data)
+    # Pass BOTH the history data and the user session data
+    return render_template('dashboard.html', history=saved_data, user=session.get('user'))
 
 @app.route('/logout')
 def logout():
