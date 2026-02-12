@@ -35,7 +35,7 @@ def log_in(email, password):
 def save_user_qr(access_token, user_id, url_string, title=None, center_text=None, style='square'):
     """Saves a URL and its design for a specific user using their UUID"""
     # This print will show up in your terminal
-    print(f"DEBUG: Saving for User UUID: {user_id}, Style: {style}, Colors: {fill_color}/{back_color}")
+    print(f"DEBUG: Saving for User UUID: {user_id}, Style: {style}, Center text: {center_text!r}")
     
     # Get user-specific client with their auth token
     user_client = get_user_client(access_token)

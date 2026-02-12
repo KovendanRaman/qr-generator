@@ -9,6 +9,9 @@
 html {
     overflow-x: hidden;
     width: 100%;
+    min-height: 100%;
+    max-width: 100vw;
+    background: #e8e0d8;
 }
 
 body {
@@ -21,7 +24,10 @@ body {
     margin: 0;
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
     font-size: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Modern Header Component */
@@ -198,35 +204,32 @@ body {
     body {
         padding: 0;
         overflow-x: hidden;
+        font-size: 18px;
     }
     
     .main-header {
-        width: 100vw;
+        width: 100%;
         max-width: 100%;
     }
     
     .header-container {
         flex-direction: column;
-        height: auto;
-        padding: 15px 15px;
-        gap: 15px;
+        min-height: auto;
+        padding: 12px 16px;
+        gap: 12px;
         max-width: 100%;
     }
     
     .header-nav {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    main {
-        margin: 20px;
-        padding: 30px 20px;
-    }
-
-    .header-nav {
         flex-wrap: wrap;
         justify-content: center;
         width: 100%;
+        gap: 6px;
+    }
+
+    .nav-link {
+        padding: 10px 14px;
+        font-size: 0.9em;
     }
 
     .user-menu {
@@ -239,8 +242,226 @@ body {
         justify-content: center;
     }
 
+    .user-email {
+        font-size: 0.8em;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .brand-text {
-        font-size: 1.2em;
+        font-size: 1.15em;
+    }
+    
+    main {
+        margin: 0;
+        padding: 16px 0 12px 0;
+        max-width: 100%;
+        width: 100%;
+        overflow-x: hidden;
+        flex: 0 0 auto;
+    }
+    
+    html,
+    body {
+        min-height: auto;
+    }
+    
+    body.page-auth .content-card {
+        margin-bottom: 0;
+    }
+    
+    body.page-auth .main-footer,
+    body.page-index .main-footer {
+        margin-top: 16px;
+    }
+    
+    .content-card {
+        max-width: 100%;
+        width: 100%;
+        padding: 24px 16px 16px;
+        margin-top: 8px;
+        margin-bottom: 12px;
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0;
+        overflow-x: hidden;
+    }
+    
+    .hero-section {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    
+    .content-card h1,
+    .content-card h2,
+    .content-card h3 {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        max-width: 100%;
+    }
+    
+    .content-card h1 {
+        font-size: 2.2em;
+    }
+    
+    .content-card h2 {
+        font-size: 1.75em;
+        margin: 20px 0 16px 0;
+    }
+    
+    form {
+        width: 100%;
+        max-width: 100%;
+        margin: 20px auto;
+        gap: 16px;
+    }
+    
+    form > input,
+    form > .input-wrapper,
+    form > .password-wrapper,
+    form > .design-options,
+    form > button {
+        max-width: 100%;
+    }
+    
+    .design-options {
+        padding: 16px;
+        margin: 20px 0;
+    }
+    
+    .design-options h3 {
+        font-size: 1em;
+    }
+    
+    .style-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .style-card {
+        padding: 10px 6px;
+        min-width: 0;
+    }
+    
+    .pattern-preview {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .style-name {
+        font-size: 0.8em;
+    }
+    
+    .result {
+        margin-top: 24px;
+        padding: 20px 16px;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .result img {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .history-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .sort-container {
+        justify-content: flex-start;
+    }
+    
+    .history-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 0;
+    }
+    
+    .history-item {
+        padding: 16px 14px;
+    }
+    
+    .result {
+        margin-bottom: 0;
+    }
+    
+    .view-qr-btn,
+    .download-btn {
+        min-height: 44px;
+        padding: 12px 20px;
+    }
+    
+    button[type="submit"] {
+        width: 100%;
+        max-width: 100%;
+        min-height: 48px;
+        padding: 16px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 16px;
+    }
+    
+    .hero-title {
+        font-size: 1.65em;
+    }
+    
+    .hero-subtitle {
+        font-size: 0.95em;
+    }
+    
+    .hero-section {
+        padding: 24px 12px;
+    }
+    
+    main {
+        padding: 12px 0 8px 0;
+    }
+    
+    body.page-auth .main-footer {
+        margin-top: 12px;
+    }
+    
+    .content-card {
+        padding: 20px 14px 12px;
+        margin-bottom: 8px;
+    }
+    
+    .content-card h1 {
+        font-size: 1.9em;
+    }
+    
+    .content-card h2 {
+        font-size: 1.5em;
+    }
+    
+    .style-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    
+    .style-card {
+        min-width: 0;
+    }
+    
+    .pattern-preview {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .nav-link {
+        padding: 8px 12px;
+        font-size: 0.85em;
     }
 }
 
@@ -292,6 +513,7 @@ nav a:hover::after {
 /* Content Card Component - Reusable modern card design */
 .content-card {
     max-width: 900px;
+    width: 100%;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
@@ -307,7 +529,8 @@ nav a:hover::after {
         0 0 0 1px rgba(255, 255, 255, 0.05) inset,
         0 2px 8px rgba(160, 120, 95, 0.1);
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
     box-sizing: border-box;
 }
 
@@ -339,12 +562,15 @@ nav a:hover::after {
 /* Keep main element styling for backward compatibility */
 main {
     max-width: 900px;
+    width: 100%;
     margin: 0 auto;
     padding: 0 24px;
     margin-top: 0;
     margin-bottom: 20px;
     position: relative;
     box-sizing: border-box;
+    flex: 1 0 auto;
+    overflow-x: hidden;
 }
 
 /* Removed main::before - body background is now cream */
@@ -377,7 +603,9 @@ p {
     text-align: center;
     padding: 50px 20px 40px;
     max-width: 800px;
+    width: 100%;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .hero-title {
@@ -389,6 +617,9 @@ p {
     background-clip: text;
     margin-bottom: 20px;
     line-height: 1.2;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 
 .hero-subtitle {
@@ -396,6 +627,9 @@ p {
     color: #8b644c;
     line-height: 1.6;
     margin: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 
 .hero-link {
@@ -423,7 +657,8 @@ p {
     }
     
     .hero-section {
-        padding: 30px 20px 30px;
+        padding: 30px 16px 30px;
+        max-width: 100%;
     }
 }
 
@@ -598,6 +833,8 @@ button:hover {
     border: 1px solid rgba(92, 64, 48, 0.15);
     box-sizing: border-box;
     width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .design-options h3 {
@@ -610,6 +847,7 @@ button:hover {
 /* Visual Style Selector */
 .style-selector-section {
     margin-bottom: 25px;
+    max-width: 100%;
 }
 
 .section-label {
@@ -625,8 +863,10 @@ button:hover {
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     gap: 12px;
     max-width: 600px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
+    box-sizing: border-box;
 }
 
 .style-grid input[type="radio"] {
@@ -644,6 +884,7 @@ button:hover {
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s ease;
+    min-width: 0;
 }
 
 .style-card:hover {
@@ -1158,15 +1399,15 @@ hr {
 
 .download-btn {
     padding: 12px 28px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #a0785f 0%, #8b644c 100%);
     color: #ffffff;
-    border: 1px solid rgba(16, 185, 129, 0.5);
+    border: 1px solid rgba(160, 120, 95, 0.45);
     border-radius: 8px;
     font-size: 1.05em;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(160, 120, 95, 0.3);
     text-transform: none;
     letter-spacing: normal;
     display: inline-flex;
@@ -1176,9 +1417,9 @@ hr {
 }
 
 .download-btn:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    border-color: rgba(16, 185, 129, 0.7);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #8b644c 0%, #6a4a38 100%);
+    border-color: rgba(160, 120, 95, 0.65);
+    box-shadow: 0 4px 12px rgba(160, 120, 95, 0.4);
     transform: translateY(-1px);
 }
 
@@ -1200,6 +1441,7 @@ strong {
     padding: 25px 0;
     width: 100%;
     position: relative;
+    flex-shrink: 0;
 }
 
 .main-footer::before {
@@ -1289,7 +1531,139 @@ strong {
     }
     
     .main-footer {
-        margin-top: 40px;
-        padding: 20px 0;
+        margin-top: 16px;
+        padding: 16px 16px;
+    }
+}
+
+/* Keep this mobile block last so desktop/base rules cannot override it */
+@media (max-width: 768px) {
+    html,
+    body {
+        min-height: 100dvh;
+        height: auto;
+        overflow-x: hidden;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    main {
+        flex: 0 0 auto;
+        margin-bottom: 0;
+        padding: 16px 0 8px 0;
+    }
+
+    .content-card {
+        height: auto;
+        min-height: 0;
+        margin-bottom: 8px;
+        padding: 24px 16px 12px;
+        border-radius: 0;
+        overflow: hidden;
+    }
+
+    /* Prevent decorative pseudo-element from extending scroll area on mobile */
+    .content-card::after {
+        display: none;
+    }
+
+    .main-footer {
+        margin-top: auto;
+        padding: 16px;
+    }
+
+    /* Auth pages: keep card natural width and remove footer whitespace */
+    body.page-auth main {
+        padding: 12px 0 0 0;
+    }
+
+    body.page-auth .content-card {
+        width: calc(100% - 24px);
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 0;
+        border-radius: 16px;
+        padding: 22px 16px 12px;
+    }
+
+    body.page-auth .main-footer {
+        margin-top: auto;
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    main {
+        padding: 12px 0 6px 0;
+    }
+
+    .content-card {
+        padding: 20px 14px 10px;
+        margin-bottom: 6px;
+    }
+
+    .main-footer {
+        margin-top: 10px;
+        padding: 14px 12px;
+    }
+
+    body.page-auth main {
+        padding: 10px 0 0 0;
+    }
+
+    body.page-auth .content-card {
+        width: calc(100% - 16px);
+        border-radius: 14px;
+        padding: 18px 12px 10px;
+        margin-bottom: 0;
+    }
+
+    body.page-auth .main-footer {
+        margin-top: auto;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+}
+
+/* Desktop: cards should expand naturally, no inner scrollbars */
+@media (min-width: 769px) {
+    main {
+        flex: 0 0 auto;
+    }
+
+    .content-card,
+    .design-options,
+    .result,
+    .history-item,
+    .qr-code-container {
+        height: auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .content-card {
+        overflow: hidden;
+    }
+
+    .content-card::after {
+        display: none;
+    }
+
+    .content-card::-webkit-scrollbar,
+    .design-options::-webkit-scrollbar,
+    .result::-webkit-scrollbar,
+    .history-item::-webkit-scrollbar,
+    .qr-code-container::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
     }
 }
