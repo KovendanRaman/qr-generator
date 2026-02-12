@@ -5,20 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% if user %}
+    <link rel="prefetch" href="{{ url_for('history') }}">
+    {% endif %}
 </head>
 <body>
     {% include 'components/header.html' %}
 
     <main>
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">Create Custom QR Codes in Seconds</h1>
+            <p class="hero-subtitle">Design beautiful QR codes with custom colors, patterns, and text. {% if not user %}<a href="/login" class="hero-link">Log in</a> to save and access your QR codes anytime.{% endif %}</p>
+        </div>
+
         <div class="content-card">
-            <h1>Generate a QR Code</h1>
+            <h2>Generate Your QR Code</h2>
             <form action="/generate" method="POST">
                 <input type="url" name="url" placeholder="Paste your link here..." required>
+                
+                <!-- Design Options Section -->
+                <div class="design-options">
+                    <h3>Customize Your QR Code</h3>
+                    
+                    <!-- Pattern Style Selector -->
+                    <div class="style-selector-section">
+                        <label class="section-label">Choose Pattern Style:</label>
+                        <div class="style-grid">
+                            <input type="radio" id="style-square" name="style" value="square" {% if style == 'square' or not style %}checked{% endif %}>
+                            <label for="style-square" class="style-card">
+                                <div class="pattern-preview pattern-square"></div>
+                                <span class="style-name">Classic</span>
+                            </label>
+
+                            <input type="radio" id="style-rounded" name="style" value="rounded" {% if style == 'rounded' %}checked{% endif %}>
+                            <label for="style-rounded" class="style-card">
+                                <div class="pattern-preview pattern-rounded"></div>
+                                <span class="style-name">Rounded</span>
+                            </label>
+
+                            <input type="radio" id="style-circle" name="style" value="circle" {% if style == 'circle' %}checked{% endif %}>
+                            <label for="style-circle" class="style-card">
+                                <div class="pattern-preview pattern-circle"></div>
+                                <span class="style-name">Circles</span>
+                            </label>
+
+                            <input type="radio" id="style-gapped" name="style" value="gapped" {% if style == 'gapped' %}checked{% endif %}>
+                            <label for="style-gapped" class="style-card">
+                                <div class="pattern-preview pattern-gapped"></div>
+                                <span class="style-name">Gapped</span>
+                            </label>
+
+                            <input type="radio" id="style-vertical" name="style" value="vertical" {% if style == 'vertical' %}checked{% endif %}>
+                            <label for="style-vertical" class="style-card">
+                                <div class="pattern-preview pattern-vertical"></div>
+                                <span class="style-name">Vertical</span>
+                            </label>
+
+                            <input type="radio" id="style-horizontal" name="style" value="horizontal" {% if style == 'horizontal' %}checked{% endif %}>
+                            <label for="style-horizontal" class="style-card">
+                                <div class="pattern-preview pattern-horizontal"></div>
+                                <span class="style-name">Horizontal</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Center Text Input -->
+                    <div class="text-control-section">
+                        <label for="center_text">Center Text (optional):</label>
+                        <input type="text" id="center_text" name="center_text" placeholder="e.g., SCAN ME" maxlength="20" value="{{ center_text or '' }}">
+                    </div>
+                </div>
+                
                 <button type="submit">Generate</button>
             </form>
 
             {% if qr_code %}
-                <div class="result">
+                <div id="qr-result" class="result">
                     <h3>Your QR Code for: {{ original_url }}</h3>
                     <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
                     <br>
@@ -27,5 +90,20 @@
             {% endif %}
         </div>
     </main>
+    {% include 'components/footer.html' %}
+    
+    {% if qr_code %}
+    <script>
+        // Smooth scroll to QR code result after generation
+        document.addEventListener('DOMContentLoaded', function() {
+            const result = document.getElementById('qr-result');
+            if (result) {
+                setTimeout(() => {
+                    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="rgba(0,0,0,0.04)"/>
+  <!-- Stylized QR-style grid: finder-like corners + scattered modules -->
+  <g fill="rgba(0,0,0,0.14)">
+    <rect x="0" y="0" width="8" height="8"/><rect x="8" y="0" width="8" height="8"/><rect x="16" y="0" width="8" height="8"/>
+    <rect x="0" y="8" width="8" height="8"/><rect x="16" y="8" width="8" height="8"/>
+    <rect x="0" y="16" width="8" height="8"/><rect x="8" y="16" width="8" height="8"/><rect x="16" y="16" width="8" height="8"/>
+    <rect x="32" y="0" width="8" height="8"/><rect x="40" y="8" width="8" height="8"/><rect x="32" y="16" width="8" height="8"/>
+    <rect x="48" y="0" width="8" height="8"/><rect x="56" y="0" width="8" height="8"/><rect x="48" y="8" width="8" height="8"/>
+    <rect x="24" y="24" width="8" height="8"/><rect x="32" y="24" width="8" height="8"/><rect x="40" y="32" width="8" height="8"/>
+    <rect x="0" y="32" width="8" height="8"/><rect x="16" y="32" width="8" height="8"/><rect x="8" y="40" width="8" height="8"/>
+    <rect x="48" y="40" width="8" height="8"/><rect x="56" y="48" width="8" height="8"/><rect x="40" y="56" width="8" height="8"/>
+    <rect x="24" y="48" width="8" height="8"/><rect x="32" y="56" width="8" height="8"/>
+  </g>
+</svg>

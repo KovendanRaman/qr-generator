@@ -32,24 +32,39 @@ def log_in(email, password):
 
 # --- DATA FUNCTIONS ---
 
-def save_user_qr(access_token, user_id, url_string, title=None):
-    """Saves a URL for a specific user using their UUID"""
+def save_user_qr(access_token, user_id, url_string, title=None, center_text=None, style='square'):
+    """Saves a URL and its design for a specific user using their UUID"""
     # This print will show up in your terminal
-    print(f"DEBUG: Saving for User UUID: {user_id}")
+    print(f"DEBUG: Saving for User UUID: {user_id}, Style: {style}, Colors: {fill_color}/{back_color}")
     
     # Get user-specific client with their auth token
     user_client = get_user_client(access_token)
-    data = {"userid": user_id, "url": url_string, "title": title}
+    data = {
+        "userid": user_id, 
+        "url": url_string, 
+        "title": title,
+        "center_text": center_text if center_text else None,
+        "style": style
+    }
     # This now passes the auth.uid() check!
     return user_client.table("saved_qrs").insert(data).execute()
 
 def get_user_history(access_token, user_id):
     """Fetches all saved URLs for a specific user"""
-    # Get user-specific client with their auth token
+    from postgrest.exceptions import APIError
     user_client = get_user_client(access_token)
-    # Note: Using 'userid' to match your Supabase screenshot
-    response = user_client.table("saved_qrs").select("*").eq("userid", user_id).execute()
-    return response.data
+    # Try 'userid' first, then 'user_id' (Supabase often uses snake_case)
+    last_error = None
+    for column in ("userid", "user_id"):
+        try:
+            response = user_client.table("saved_qrs").select("*").eq(column, user_id).execute()
+            return response.data or []
+        except APIError as e:
+            last_error = e
+            continue
+    if last_error:
+        raise last_error
+    return []
 
 def update_qr_title(access_token, qr_id, new_title):
     """Updates the title of a saved QR code"""

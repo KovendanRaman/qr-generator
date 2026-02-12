@@ -3,6 +3,12 @@ import io
 import base64
 from flask import Flask, render_template, request, session, redirect, url_for, flash, send_file, jsonify
 import qrcode
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import (
+    SquareModuleDrawer, GappedSquareModuleDrawer, CircleModuleDrawer,
+    RoundedModuleDrawer, VerticalBarsDrawer, HorizontalBarsDrawer
+)
+from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
@@ -10,6 +16,8 @@ from urllib.parse import urlparse
 
 # Import the functions we wrote in database.py
 from database import log_in, sign_up, save_user_qr, get_user_history, update_qr_title
+from postgrest.exceptions import APIError
+from supabase import AuthApiError, AuthInvalidCredentialsError
 
 load_dotenv()
 
@@ -19,13 +27,75 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "default-secret-for-local-de
 
 # --- HELPER FUNCTIONS ---
 
-def generate_qr_base64(url):
-    """Generates a QR code and converts it to a base64 string for HTML display."""
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+# QR Code Style Presets
+STYLE_PRESETS = {
+    'square': SquareModuleDrawer(),
+    'rounded': RoundedModuleDrawer(),
+    'circle': CircleModuleDrawer(),
+    'gapped': GappedSquareModuleDrawer(),
+    'vertical': VerticalBarsDrawer(),
+    'horizontal': HorizontalBarsDrawer(),
+}
+
+def generate_qr_base64(url, center_text=None, style="square"):
+    """Generates a QR code with custom style pattern and optional center text."""
+    # Use high error correction so center text doesn't break scanning
+    qr = qrcode.QRCode(
+        version=1, 
+        box_size=10, 
+        border=5,
+        error_correction=qrcode.constants.ERROR_CORRECT_H
+    )
     qr.add_data(url)
     qr.make(fit=True)
     
-    img = qr.make_image(fill_color="black", back_color="white")
+    # Use styled image with selected pattern
+    module_drawer = STYLE_PRESETS.get(style, SquareModuleDrawer())
+    img = qr.make_image(
+        image_factory=StyledPilImage,
+        module_drawer=module_drawer,
+        fill_color="black",
+        back_color="white"
+    )
+    
+    # Add center text if provided
+    if center_text and center_text.strip():
+        img = img.convert('RGB')
+        draw = ImageDraw.Draw(img)
+        
+        # Calculate center position and text size
+        img_width, img_height = img.size
+        
+        # Try to use a nice font, fall back to default if unavailable
+        try:
+            font_size = max(20, img_width // 15)
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+        
+        # Get text bounding box
+        bbox = draw.textbbox((0, 0), center_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Always use high contrast colors for center text readability
+        # White background with black text for maximum readability
+        text_bg_color = "white"
+        text_color = "black"
+        
+        # Draw background rectangle for text
+        padding = 10
+        rect_x1 = (img_width - text_width) // 2 - padding
+        rect_y1 = (img_height - text_height) // 2 - padding
+        rect_x2 = (img_width + text_width) // 2 + padding
+        rect_y2 = (img_height + text_height) // 2 + padding
+        
+        draw.rectangle([rect_x1, rect_y1, rect_x2, rect_y2], fill=text_bg_color)
+        
+        # Draw the text in black for best readability
+        text_x = (img_width - text_width) // 2
+        text_y = (img_height - text_height) // 2
+        draw.text((text_x, text_y), center_text, fill=text_color, font=font)
     
     # Save image to a bytes buffer in memory
     buffered = io.BytesIO()
@@ -75,10 +145,14 @@ def generate():
         flash("Please enter a URL!")
         return redirect(url_for('index'))
 
-    # Generate the image string
-    qr_base64 = generate_qr_base64(url)
+    # Get design parameters from form (with defaults)
+    center_text = request.form.get('center_text', '').strip()
+    style = request.form.get('style', 'square') or 'square'
 
-    # If the user is logged in, save the URL to their history in Supabase
+    # Generate the image string with custom design
+    qr_base64 = generate_qr_base64(url, center_text, style)
+
+    # If the user is logged in, save the URL and design to their history in Supabase
     if 'user' in session:
         token = session.get('access_token')
         user_id = session['user'].get('id')
@@ -86,10 +160,12 @@ def generate():
         # Fetch page title automatically
         title = fetch_page_title(url)
         
-        save_user_qr(token, user_id, url, title)  # Pass the token and title
+        # Save with design parameters
+        save_user_qr(token, user_id, url, title, center_text, style)
 
     user = session.get('user')
-    return render_template('index.html', qr_code=qr_base64, original_url=url, user=user)
+    return render_template('index.html', qr_code=qr_base64, original_url=url, user=user, 
+                          center_text=center_text, style=style)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_route():
@@ -97,11 +173,24 @@ def signup_route():
         email = request.form.get('email')
         password = request.form.get('password')
         try:
-            sign_up(email, password)
-            flash("Signup successful! Please log in.")
+            res = sign_up(email, password)
+            # When "Confirm email" is disabled, Supabase returns session; log user in and go to app
+            if getattr(res, 'session', None) and res.session:
+                session['access_token'] = res.session.access_token
+                session['user'] = {'id': res.user.id, 'email': res.user.email}
+                flash("Account created! Welcome.")
+                return redirect(url_for('index'))
+            # Email confirmation required
+            flash("Account created! Please check your email to confirm, then log in.")
             return redirect(url_for('login_route'))
+        except AuthApiError as e:
+            msg = str(e).lower()
+            if "already registered" in msg or "already exists" in msg:
+                flash("This email is already registered. Try logging in or use a different email.", "error")
+            else:
+                flash(f"Sign up failed: {str(e)}", "error")
         except Exception as e:
-            flash(f"Error: {str(e)}")
+            flash(f"Sign up failed: {str(e)}", "error")
     user = session.get('user')
     return render_template('signup.html', user=user)
 
@@ -112,66 +201,155 @@ def login_route():
         password = request.form.get('password')
         try:
             res = log_in(email, password)
-            # IMPORTANT: session['user'] must be set correctly
-            # Supabase returns the user object in res.user
-            session['access_token'] = res.session.access_token  # Save the token
+            session['access_token'] = res.session.access_token
             session['user'] = {'id': res.user.id, 'email': res.user.email}
-            
             flash("Welcome back!")
-            return redirect(url_for('index'))  # This sends you home after login
+            return redirect(url_for('index'))
+        except AuthInvalidCredentialsError:
+            flash("Invalid email or password. If you don't have an account, sign up first.", "error")
+        except AuthApiError as e:
+            msg = str(e).lower()
+            if "invalid" in msg and ("credential" in msg or "password" in msg or "login" in msg):
+                flash("Invalid email or password. If you don't have an account, sign up first.", "error")
+            else:
+                flash(f"Login failed: {str(e)}", "error")
         except Exception as e:
-            print(f"Login Error: {e}")  # This prints the error to your terminal
-            flash("Invalid login credentials.")
+            print(f"Login Error: {e}")
+            flash("Invalid email or password. If you don't have an account, sign up first.", "error")
     user = session.get('user')
     return render_template('login.html', user=user)
 
 @app.route('/qrcode_image')
 def qrcode_image():
-    """Generates a QR code image file on demand"""
+    """Generates a QR code image file on demand with custom design options"""
     url = request.args.get('url')
     if not url:
         return "Error: No URL provided", 400
 
-    # Generate QR Code directly to memory
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    # Get design parameters from query string (with defaults)
+    center_text = request.args.get('center_text', '').strip()
+    style = request.args.get('style', 'square') or 'square'
+
+    # Use high error correction for center text
+    qr = qrcode.QRCode(
+        version=1, 
+        box_size=10, 
+        border=5,
+        error_correction=qrcode.constants.ERROR_CORRECT_H
+    )
     qr.add_data(url)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
     
-    # Save to a byte buffer (like a virtual file)
+    # Use styled image with selected pattern
+    module_drawer = STYLE_PRESETS.get(style, SquareModuleDrawer())
+    img = qr.make_image(
+        image_factory=StyledPilImage,
+        module_drawer=module_drawer,
+        fill_color="black",
+        back_color="white"
+    )
+    
+    # Add center text if provided
+    if center_text:
+        img = img.convert('RGB')
+        draw = ImageDraw.Draw(img)
+        
+        img_width, img_height = img.size
+        
+        try:
+            font_size = max(20, img_width // 15)
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+        
+        bbox = draw.textbbox((0, 0), center_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Always use high contrast colors for center text readability
+        # White background with black text for maximum readability
+        text_bg_color = "white"
+        text_color = "black"
+        
+        padding = 10
+        rect_x1 = (img_width - text_width) // 2 - padding
+        rect_y1 = (img_height - text_height) // 2 - padding
+        rect_x2 = (img_width + text_width) // 2 + padding
+        rect_y2 = (img_height + text_height) // 2 + padding
+        
+        draw.rectangle([rect_x1, rect_y1, rect_x2, rect_y2], fill=text_bg_color)
+        
+        text_x = (img_width - text_width) // 2
+        text_y = (img_height - text_height) // 2
+        draw.text((text_x, text_y), center_text, fill=text_color, font=font)
+    
+    # Save to a byte buffer
     buf = io.BytesIO()
-    img.save(buf)
+    img.save(buf, format='PNG')
     buf.seek(0)
     
-    # Send it back to the browser as a real PNG image
     return send_file(buf, mimetype='image/png')
 
-@app.route('/history')
-def history():
-    if 'user' not in session:
-        return redirect(url_for('login_route'))
-    
-    token = session.get('access_token')
-    user_id = session['user']['id']
-    
-    # Get sorting parameter from query string
-    sort_by = request.args.get('sort', 'date_desc')  # Default: newest first
-    
-    # Just fetch the data - NO looping or generation here!
-    saved_data = get_user_history(token, user_id)
-    
-    # Apply sorting
+def _title_sort_key(x):
+    """Safe sort key for title; handle None/missing or non-strings."""
+    raw = x.get("title") or x.get("url") or ""
+    return str(raw).lower()
+
+
+def _fetch_sorted_history(token, user_id, sort_by):
+    """Fetch user history from DB and apply sort. Returns (list, error_msg). error_msg is None on success."""
+    saved_data = []
+    try:
+        saved_data = get_user_history(token, user_id)
+    except APIError as e:
+        err_str = str(e).lower()
+        if "jwt expired" in err_str or "pgrst303" in err_str:
+            return None, "session_expired"
+        if "502" in err_str or "bad gateway" in err_str or "503" in err_str:
+            try:
+                saved_data = get_user_history(token, user_id)
+            except Exception:
+                pass
+        if not saved_data:
+            return [], "api_error"
+    except Exception:
+        return [], "api_error"
+    saved_data = saved_data or []
     if saved_data:
         if sort_by == 'date_asc':
             saved_data = sorted(saved_data, key=lambda x: x.get('created_at', ''))
         elif sort_by == 'date_desc':
             saved_data = sorted(saved_data, key=lambda x: x.get('created_at', ''), reverse=True)
         elif sort_by == 'title_asc':
-            saved_data = sorted(saved_data, key=lambda x: (x.get('title') or x.get('url', '')).lower())
+            saved_data = sorted(saved_data, key=_title_sort_key)
         elif sort_by == 'title_desc':
-            saved_data = sorted(saved_data, key=lambda x: (x.get('title') or x.get('url', '')).lower(), reverse=True)
-    
-    return render_template('dashboard.html', history=saved_data, user=session.get('user'), current_sort=sort_by)
+            saved_data = sorted(saved_data, key=_title_sort_key, reverse=True)
+    return saved_data, None
+
+
+@app.route('/api/history')
+def api_history():
+    """Returns history as JSON for lazy loading. Requires auth."""
+    if 'user' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    token = session.get('access_token')
+    user_id = session['user']['id']
+    sort_by = request.args.get('sort', 'date_desc')
+    saved_data, err = _fetch_sorted_history(token, user_id, sort_by)
+    if err == "session_expired":
+        return jsonify({'error': 'session_expired'}), 401
+    if err == "api_error":
+        return jsonify({'error': 'Could not load history.', 'history': []}), 200
+    return jsonify({'history': saved_data, 'current_sort': sort_by})
+
+
+@app.route('/history')
+def history():
+    if 'user' not in session:
+        return redirect(url_for('login_route'))
+    sort_by = request.args.get('sort', 'date_desc')
+    # Render shell immediately; history is loaded lazily via /api/history in the browser
+    return render_template('dashboard.html', history=[], user=session.get('user'), current_sort=sort_by)
 
 @app.route('/update_title', methods=['POST'])
 def update_title():
