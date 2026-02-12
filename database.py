@@ -1,8 +1,11 @@
 import os
+import logging
 from dotenv import load_dotenv
 from supabase import create_client, Client, ClientOptions
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
@@ -34,8 +37,7 @@ def log_in(email, password):
 
 def save_user_qr(access_token, user_id, url_string, title=None, center_text=None, style='square'):
     """Saves a URL and its design for a specific user using their UUID"""
-    # This print will show up in your terminal
-    print(f"DEBUG: Saving for User UUID: {user_id}, Style: {style}, Center text: {center_text!r}")
+    logger.debug("Saving QR for user_id=%s style=%s", user_id, style)
     
     # Get user-specific client with their auth token
     user_client = get_user_client(access_token)
@@ -68,8 +70,8 @@ def get_user_history(access_token, user_id):
 
 def update_qr_title(access_token, qr_id, new_title):
     """Updates the title of a saved QR code"""
-    print(f"DEBUG update_qr_title: access_token exists: {bool(access_token)}, qr_id: {qr_id}, new_title: {new_title}")
+    logger.debug("Updating QR title for qr_id=%s", qr_id)
     user_client = get_user_client(access_token)
     result = user_client.table("saved_qrs").update({"title": new_title}).eq("id", qr_id).execute()
-    print(f"DEBUG update_qr_title result: {result}")
+    logger.debug("QR title update completed for qr_id=%s", qr_id)
     return result

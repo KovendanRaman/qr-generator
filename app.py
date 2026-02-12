@@ -1,6 +1,9 @@
 import os
+import sys
 import io
 import base64
+import time
+import secrets
 from flask import Flask, render_template, request, session, redirect, url_for, flash, send_file, jsonify
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
@@ -23,7 +26,15 @@ load_dotenv()
 
 app = Flask(__name__)
 # Flask needs this to encrypt the session cookies that remember users
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "default-secret-for-local-dev")
+_DEFAULT_SECRET = "default-secret-for-local-dev"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", _DEFAULT_SECRET)
+
+ALLOWED_QR_URL_SCHEMES = {"http", "https"}
+MAX_URL_LENGTH = 2048
+MAX_CENTER_TEXT_LENGTH = 20
+UPDATE_TITLE_RATE_LIMIT = 30
+UPDATE_TITLE_WINDOW_SECONDS = 60
+_update_title_rate_store = {}
 
 # --- HELPER FUNCTIONS ---
 
@@ -36,6 +47,75 @@ STYLE_PRESETS = {
     'vertical': VerticalBarsDrawer(),
     'horizontal': HorizontalBarsDrawer(),
 }
+VALID_STYLES = set(STYLE_PRESETS.keys())
+
+
+def _get_or_create_csrf_token():
+    token = session.get("csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf_token"] = token
+    return token
+
+
+def _validate_csrf_token_from_request():
+    session_token = session.get("csrf_token")
+    request_token = (
+        request.headers.get("X-CSRF-Token")
+        or request.form.get("csrf_token")
+        or (request.get_json(silent=True) or {}).get("csrf_token")
+    )
+    return bool(session_token and request_token and secrets.compare_digest(session_token, request_token))
+
+
+def _is_rate_limited(key, limit, window_seconds):
+    now = time.time()
+    timestamps = _update_title_rate_store.get(key, [])
+    timestamps = [ts for ts in timestamps if now - ts < window_seconds]
+    if len(timestamps) >= limit:
+        _update_title_rate_store[key] = timestamps
+        return True
+    timestamps.append(now)
+    _update_title_rate_store[key] = timestamps
+    return False
+
+
+def _sanitize_center_text(value):
+    text = (value or "").strip()
+    if len(text) > MAX_CENTER_TEXT_LENGTH:
+        text = text[:MAX_CENTER_TEXT_LENGTH]
+    return text
+
+
+def _normalize_style(value):
+    style = (value or "square").strip().lower()
+    if style not in VALID_STYLES:
+        return "square"
+    return style
+
+
+def _validate_url(url):
+    value = (url or "").strip()
+    if not value:
+        return None, "Please enter a URL."
+    if len(value) > MAX_URL_LENGTH:
+        return None, f"URL is too long (max {MAX_URL_LENGTH} characters)."
+    if any(ord(ch) < 32 for ch in value):
+        return None, "URL contains invalid characters."
+    try:
+        parsed = urlparse(value)
+    except Exception:
+        return None, "Please enter a valid URL."
+    if parsed.scheme.lower() not in ALLOWED_QR_URL_SCHEMES:
+        return None, "Only http:// and https:// URLs are allowed."
+    if not parsed.netloc:
+        return None, "Please enter a complete URL including the domain."
+    return value, None
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": _get_or_create_csrf_token()}
 
 def generate_qr_base64(url, center_text=None, style="square"):
     """Generates a QR code with custom style pattern and optional center text."""
@@ -140,14 +220,19 @@ def index():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    url = request.form.get('url')
-    if not url:
-        flash("Please enter a URL!")
+    if not _validate_csrf_token_from_request():
+        flash("Invalid or missing CSRF token. Please refresh and try again.", "error")
+        return redirect(url_for('index'))
+
+    raw_url = request.form.get('url')
+    url, url_error = _validate_url(raw_url)
+    if url_error:
+        flash(url_error, "error")
         return redirect(url_for('index'))
 
     # Get design parameters from form (with defaults)
-    center_text = request.form.get('center_text', '').strip()
-    style = request.form.get('style', 'square') or 'square'
+    center_text = _sanitize_center_text(request.form.get('center_text', ''))
+    style = _normalize_style(request.form.get('style', 'square'))
 
     # Generate the image string with custom design
     qr_base64 = generate_qr_base64(url, center_text, style)
@@ -222,13 +307,14 @@ def login_route():
 @app.route('/qrcode_image')
 def qrcode_image():
     """Generates a QR code image file on demand with custom design options"""
-    url = request.args.get('url')
-    if not url:
-        return "Error: No URL provided", 400
+    raw_url = request.args.get('url')
+    url, url_error = _validate_url(raw_url)
+    if url_error:
+        return f"Error: {url_error}", 400
 
     # Get design parameters from query string (with defaults)
-    center_text = request.args.get('center_text', '').strip()
-    style = request.args.get('style', 'square') or 'square'
+    center_text = _sanitize_center_text(request.args.get('center_text', ''))
+    style = _normalize_style(request.args.get('style', 'square'))
 
     # Use high error correction for center text
     qr = qrcode.QRCode(
@@ -356,26 +442,33 @@ def update_title():
     """Updates the title of a saved QR code"""
     if 'user' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
+
+    if not _validate_csrf_token_from_request():
+        return jsonify({'error': 'Invalid or missing CSRF token'}), 403
+
+    rate_key = session['user'].get('id') or request.remote_addr or 'anonymous'
+    if _is_rate_limited(rate_key, UPDATE_TITLE_RATE_LIMIT, UPDATE_TITLE_WINDOW_SECONDS):
+        return jsonify({'error': 'Too many update attempts. Please wait and try again.'}), 429
+
+    data = request.get_json(silent=True) or {}
     qr_id = data.get('id')
-    new_title = data.get('title')
-    
-    print(f"DEBUG: Received update request - ID: {qr_id}, Title: {new_title}")
-    
+    new_title = data.get('title', '')
+
     if not qr_id or new_title is None:  # Allow empty string
         return jsonify({'error': 'Missing id or title'}), 400
-    
+
+    if not isinstance(new_title, str):
+        return jsonify({'error': 'Invalid title type'}), 400
+    new_title = new_title.strip()
+    if len(new_title) > 120:
+        return jsonify({'error': 'Title must be 120 characters or fewer'}), 400
+
     token = session.get('access_token')
-    
+
     try:
-        result = update_qr_title(token, qr_id, new_title)
-        print(f"DEBUG: Database update result: {result}")
+        update_qr_title(token, qr_id, new_title)
         return jsonify({'success': True, 'title': new_title})
     except Exception as e:
-        print(f"Error updating title: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/logout')
@@ -384,4 +477,10 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true")
+    secret = os.environ.get("FLASK_SECRET_KEY")
+    if not debug and (not secret or secret.strip() == "" or secret == _DEFAULT_SECRET):
+        print("Error: FLASK_SECRET_KEY must be set to a secure random value in production.", file=sys.stderr)
+        print("Set FLASK_DEBUG=1 only for local development.", file=sys.stderr)
+        sys.exit(1)
+    app.run(debug=debug)

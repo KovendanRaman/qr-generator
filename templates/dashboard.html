@@ -166,6 +166,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
                     id: id,
@@ -202,9 +203,5 @@
         animation: fadeIn 0.4s ease-out;
     }
     </style>
-</body>
-</html>
-        </div>
-    </main>
 </body>
 </html>

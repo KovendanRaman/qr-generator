@@ -22,6 +22,7 @@
         <div class="content-card">
             <h2>Generate Your QR Code</h2>
             <form action="/generate" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="url" name="url" placeholder="Paste your link here..." required>
                 
                 <!-- Design Options Section -->
