@@ -4,6 +4,7 @@ import io
 import base64
 import time
 import secrets
+import logging
 from flask import Flask, render_template, request, session, redirect, url_for, flash, send_file, jsonify
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
@@ -24,6 +25,8 @@ from supabase import AuthApiError, AuthInvalidCredentialsError
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 app = Flask(__name__)
 # Flask needs this to encrypt the session cookies that remember users
 _DEFAULT_SECRET = "default-secret-for-local-dev"
@@ -252,6 +255,18 @@ def generate():
     return render_template('index.html', qr_code=qr_base64, original_url=url, user=user, 
                           center_text=center_text, style=style)
 
+def _session_and_user_from_signup_response(res):
+    """Extract (access_token, user_id, user_email) from Supabase sign_up response. Handles different response shapes."""
+    session_obj = getattr(res, 'session', None)
+    user_obj = getattr(res, 'user', None)
+    access_token = None
+    if session_obj is not None:
+        access_token = getattr(session_obj, 'access_token', None)
+    user_id = getattr(user_obj, 'id', None) if user_obj else None
+    user_email = getattr(user_obj, 'email', None) if user_obj else None
+    return access_token, user_id, user_email
+
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_route():
     if request.method == 'POST':
@@ -259,14 +274,20 @@ def signup_route():
         password = request.form.get('password')
         try:
             res = sign_up(email, password)
-            # When "Confirm email" is disabled, Supabase returns session; log user in and go to app
-            if getattr(res, 'session', None) and res.session:
-                session['access_token'] = res.session.access_token
-                session['user'] = {'id': res.user.id, 'email': res.user.email}
+            # Debug: log what Supabase returned (check Render logs if signup misbehaves)
+            has_sess = getattr(res, 'session', None) is not None
+            has_user = getattr(res, 'user', None) is not None
+            logger.info("Signup response: has_session=%s has_user=%s", has_sess, has_user)
+            access_token, user_id, user_email = _session_and_user_from_signup_response(res)
+            if access_token and user_id:
+                session['access_token'] = access_token
+                session['user'] = {'id': user_id, 'email': user_email or email or ''}
                 flash("Account created! Welcome.")
                 return redirect(url_for('index'))
-            # Email confirmation required
-            flash("Account created! Please check your email to confirm, then log in.")
+            if user_id:
+                flash("Account created! Please check your email to confirm, then log in.")
+                return redirect(url_for('login_route'))
+            flash("Sign up completed but we couldn’t log you in. Please try logging in.", "error")
             return redirect(url_for('login_route'))
         except AuthApiError as e:
             msg = str(e).lower()
@@ -275,6 +296,7 @@ def signup_route():
             else:
                 flash(f"Sign up failed: {str(e)}", "error")
         except Exception as e:
+            logger.exception("Signup error")
             flash(f"Sign up failed: {str(e)}", "error")
     user = session.get('user')
     return render_template('signup.html', user=user)
