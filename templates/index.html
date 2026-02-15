@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Generator</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <!-- Open Graph / link preview (WhatsApp, iMessage, etc.) -->
+    <meta property="og:title" content="QR Code Generator">
+    <meta property="og:description" content="Create, save, and manage secure QR codes instantly.">
+    <meta property="og:image" content="{{ url_for('static', filename='preview.png', _external=True) }}">
+    <meta property="og:url" content="{{ request.url }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% if user %}
     <link rel="prefetch" href="{{ url_for('history') }}">
